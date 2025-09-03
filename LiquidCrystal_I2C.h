@@ -47,17 +47,15 @@
 #define LCD_BACKLIGHT 0x08
 #define LCD_NOBACKLIGHT 0x00
 
-#define En B00000100  // Enable bit
-#define Rw B00000010  // Read/Write bit
-#define Rs B00000001  // Register select bit
+#define En B00000100
+#define Rw B00000010
+#define Rs B00000001
 
 class LiquidCrystal_I2C : public Print {
 public:
-    LiquidCrystal_I2C(uint8_t lcd_addr, uint8_t lcd_cols, uint8_t lcd_rows, uint8_t charsize = LCD_5x8DOTS);
+    LiquidCrystal_I2C(uint8_t lcd_addr, uint8_t lcd_cols, uint8_t lcd_rows,uint8_t sda, uint8_t scl, uint8_t wire_id,uint8_t charsize = LCD_5x8DOTS);
 
-    void begin();               // Default begin (uses Wire)
-    void begin(TwoWire* wire);  // Overload for custom I2C bus
-
+    void begin();
     void clear();
     void home();
     void noDisplay();
@@ -68,32 +66,21 @@ public:
     void cursor();
     void scrollDisplayLeft();
     void scrollDisplayRight();
-    void printLeft();
-    void printRight();
     void leftToRight();
     void rightToLeft();
-    void shiftIncrement();
-    void shiftDecrement();
-    void noBacklight();
-    void backlight();
-    bool getBacklight();
     void autoscroll();
     void noAutoscroll();
     void createChar(uint8_t, uint8_t[]);
     void setCursor(uint8_t, uint8_t);
     virtual size_t write(uint8_t);
     void command(uint8_t);
-
-    inline void blink_on() { blink(); }
-    inline void blink_off() { noBlink(); }
-    inline void cursor_on() { cursor(); }
-    inline void cursor_off() { noCursor(); }
-
-    // Compatibility aliases
     void setBacklight(uint8_t new_val);
     void load_custom_character(uint8_t char_num, uint8_t *rows);
     void printstr(const char[]);
     void forceReset();
+    void backlight();
+    void noBacklight();
+    bool getBacklight();
 
 private:
     void send(uint8_t, uint8_t);
@@ -109,8 +96,14 @@ private:
     uint8_t _rows;
     uint8_t _charsize;
     uint8_t _backlightval;
-
-    TwoWire* _wire = &Wire; // Default to Wire, can be overridden
+    uint8_t _sda;
+    uint8_t _scl;
+    bool _wire_initialized = false;
+    uint8_t _wire_id;
+    TwoWire* _wire;
+    static uint8_t wire_counter;
+    uint8_t _cursor_col = 0;
+    uint8_t _cursor_row = 0;
 };
 
-#endif // FDB_LIQUID_CRYSTAL_I2C_H
+#endif

@@ -1,56 +1,43 @@
 #include "LiquidCrystal_I2C.h"
-#include <inttypes.h>
 #include <Arduino.h>
-#include <Wire.h>
 
-LiquidCrystal_I2C::LiquidCrystal_I2C(uint8_t lcd_addr, uint8_t lcd_cols, uint8_t lcd_rows, uint8_t charsize) {
+/// @brief The constructor for the LiquidCrystal_I2C class.
+/// @param lcd_addr The I2C address of the LCD (MUST DIFFRENT ADDRESS).
+/// @param lcd_cols The number of columns for the LCD.
+/// @param lcd_rows The number of rows for the LCD.
+/// @param sda The SDA pin for I2C communication.
+/// @param scl The SCL pin for I2C communication.
+/// @param wire_id The Wire ID I2C Communication
+LiquidCrystal_I2C::LiquidCrystal_I2C(uint8_t lcd_addr, uint8_t lcd_cols, uint8_t lcd_rows,uint8_t sda, uint8_t scl, uint8_t wire_id,uint8_t charsize) {
     _addr = lcd_addr;
     _cols = lcd_cols;
     _rows = lcd_rows;
     _charsize = charsize;
     _backlightval = LCD_BACKLIGHT;
-    _wire = &Wire; // default to Wire
-}
+    _sda = sda;
+    _scl = scl;
+    _wire_id = wire_id;
 
-void LiquidCrystal_I2C::begin(TwoWire* wire) {
-    _wire = wire;
-    _wire->begin();
-    begin(); // call default init
-}
-void LiquidCrystal_I2C::forceReset() {
-    _backlightval = LCD_NOBACKLIGHT;
-    expanderWrite(0x00);
-    delay(1000);
-
-    _backlightval = LCD_BACKLIGHT;
-    expanderWrite(_backlightval);
-    delay(1000);
-
-    clear();
-    home();
+    _wire = new TwoWire(_wire_id);
 }
 
 void LiquidCrystal_I2C::begin() {
-    _wire->begin();
-    _displayfunction = LCD_4BITMODE | LCD_1LINE | LCD_5x8DOTS;
+    if (!_wire_initialized) {
+        _wire->begin(_sda, _scl);
+        _wire_initialized = true;
+    }
 
-    if (_rows > 1) {
-        _displayfunction |= LCD_2LINE;
-    }
-    if ((_charsize != 0) && (_rows == 1)) {
-        _displayfunction |= LCD_5x10DOTS;
-    }
+    _displayfunction = LCD_4BITMODE | LCD_1LINE | LCD_5x8DOTS;
+    if (_rows > 1) _displayfunction |= LCD_2LINE;
+    if ((_charsize != 0) && (_rows == 1)) _displayfunction |= LCD_5x10DOTS;
 
     delay(50);
     expanderWrite(_backlightval);
     delay(1000);
 
-    write4bits(0x03 << 4);
-    delayMicroseconds(4500);
-    write4bits(0x03 << 4);
-    delayMicroseconds(4500);
-    write4bits(0x03 << 4);
-    delayMicroseconds(150);
+    write4bits(0x03 << 4); delayMicroseconds(4500);
+    write4bits(0x03 << 4); delayMicroseconds(4500);
+    write4bits(0x03 << 4); delayMicroseconds(150);
     write4bits(0x02 << 4);
 
     command(LCD_FUNCTIONSET | _displayfunction);
@@ -65,19 +52,37 @@ void LiquidCrystal_I2C::begin() {
     forceReset();
 }
 
+void LiquidCrystal_I2C::forceReset() {
+    _backlightval = LCD_NOBACKLIGHT;
+    expanderWrite(0x00);
+    delay(1000);
+    _backlightval = LCD_BACKLIGHT;
+    expanderWrite(_backlightval);
+    delay(1000);
+    clear();
+    home();
+}
+
 void LiquidCrystal_I2C::clear() {
     command(LCD_CLEARDISPLAY);
     delayMicroseconds(2000);
+    _cursor_col = 0;
+    _cursor_row = 0;
 }
 
 void LiquidCrystal_I2C::home() {
     command(LCD_RETURNHOME);
     delayMicroseconds(2000);
+    _cursor_col = 0;
+    _cursor_row = 0;
 }
 
 void LiquidCrystal_I2C::setCursor(uint8_t col, uint8_t row) {
     int row_offsets[] = { 0x00, 0x40, 0x14, 0x54 };
     if (row >= _rows) row = _rows - 1;
+    if (col >= _cols) col = _cols - 1;
+    _cursor_col = col;
+    _cursor_row = row;
     command(LCD_SETDDRAMADDR | (col + row_offsets[row]));
 }
 
@@ -142,9 +147,7 @@ void LiquidCrystal_I2C::noAutoscroll() {
 void LiquidCrystal_I2C::createChar(uint8_t location, uint8_t charmap[]) {
     location &= 0x7;
     command(LCD_SETCGRAMADDR | (location << 3));
-    for (int i = 0; i < 8; i++) {
-        write(charmap[i]);
-    }
+    for (int i = 0; i < 8; i++) write(charmap[i]);
 }
 
 void LiquidCrystal_I2C::noBacklight() {
@@ -166,7 +169,9 @@ inline void LiquidCrystal_I2C::command(uint8_t value) {
 }
 
 inline size_t LiquidCrystal_I2C::write(uint8_t value) {
+    if (_cursor_col >= _cols) return 0;
     send(value, Rs);
+    _cursor_col++;
     return 1;
 }
 
