@@ -1,21 +1,23 @@
-# LiquidCrystal_I2C_Revision
+# LiquidCrystal_I2C
 
 LiquidCrystal Arduino And ESP32 library for I2C LCD displays 
 
-what's changed?:
-  - `Add Support Multiple LCD (WARNING! Must Different I2C Addresses)`
+To Do :
+ - [X] Add Support Multiple LCD Different Address
+ - [X] Bugfix not cropped text while text fulled in column
+ - [X] Auto Reboot LCD
 
 **How To Use?**
 ```c++
 #include "LiquidCrystal_I2C.h"
 
 // Properties LCD1
-const int lcdA_sda = 27;
-const int lcdA_scl = 26;
+const int lcdA_sda = 27; // Change Your Actual Pins SDA 
+const int lcdA_scl = 26; // Change Your Actual Pins SCL
 LiquidCrystal_I2C lcdA(0x27, 20, 4, lcdA_sda, lcdA_scl, 0); // (Address lcd, column, rows, sda, scl, number wire)
 // Properties LCD2
-const int lcdB_sda = 25;
-const int lcdB_scl = 33;
+const int lcdB_sda = 25;  // Change Your Actual Pins SDA 
+const int lcdB_scl = 33; // Change Your Actual Pins SCL 
 LiquidCrystal_I2C lcdB(0x26, 16, 2, lcdB_sda, lcdB_scl, 1); // (Address lcd, column, rows, sda, scl, number wire)
 
 void setup() {
